@@ -25,13 +25,26 @@ async function loadSavedSpeed() {
 }
 
 // Save speed to storage
-async function saveSpeed(speed) {
-  try {
-    await chrome.storage.local.set({ playbackSpeed: speed });
-    currentSpeed = speed;
-  } catch (error) {
-    console.error('Error saving speed:', error);
+function saveSpeed(speed) {
+  // Validate speed value
+  if (typeof speed !== 'number' || isNaN(speed) || speed < MIN_SPEED || speed > MAX_SPEED) {
+    console.warn('Invalid speed value:', speed);
+    return;
   }
+  
+  if (!chrome.storage || !chrome.storage.local) {
+    console.warn('Chrome storage API not available');
+    return;
+  }
+  
+  chrome.storage.local.set({ playbackSpeed: speed }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('Error saving speed:', chrome.runtime.lastError);
+    } else {
+      // Optional: log success for debugging
+      // console.log('Speed saved:', speed);
+    }
+  });
 }
 
 // Apply speed to video element
