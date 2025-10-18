@@ -1,0 +1,419 @@
+/* YouTube Custom Speed Control - Content Styles */
+
+.yt-custom-speed-button {
+  position: relative;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+
+.yt-custom-speed-button:hover {
+  opacity: 1;
+}
+
+.yt-custom-speed-button svg {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Speed Panel */
+.yt-custom-speed-panel {
+  position: absolute;
+  z-index: 68;
+  background: rgba(28, 28, 28, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 320px;
+  max-width: 320px;
+  max-height: 700px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  font-family: "YouTube Sans", "Roboto", sans-serif;
+  color: #fff;
+  user-select: none;
+  bottom: 75px;
+  right: 50px;
+}
+
+/* Responsive panel classes (applied via JavaScript) */
+.yt-custom-speed-panel.panel-compact {
+  padding: 12px;
+}
+
+.yt-custom-speed-panel.panel-compact .speed-section {
+  margin-bottom: 10px;
+}
+
+.yt-custom-speed-panel.panel-compact .speed-preset-btn {
+  font-size: 12px;
+  padding: 8px 4px;
+}
+
+.yt-custom-speed-panel.panel-compact .speed-panel-header span {
+  font-size: 14px;
+}
+
+.yt-custom-speed-panel.panel-compact .speed-current-value {
+  font-size: 18px;
+}
+
+.yt-custom-speed-panel.panel-full {
+  padding: 10px;
+}
+
+.yt-custom-speed-panel.panel-full .speed-section {
+  margin-bottom: 8px;
+}
+
+.yt-custom-speed-panel.panel-full .speed-preset-btn {
+  font-size: 11px;
+  padding: 7px 3px;
+}
+
+.yt-custom-speed-panel.panel-full .speed-panel-header span {
+  font-size: 13px;
+}
+
+.yt-custom-speed-panel.panel-full .speed-current-value {
+  font-size: 16px;
+}
+
+.yt-custom-speed-panel.panel-full .speed-group-normal {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.yt-custom-speed-panel.panel-full .speed-group-fast {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.yt-custom-speed-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.yt-custom-speed-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.yt-custom-speed-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.yt-custom-speed-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.speed-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.speed-panel-header span {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+
+.speed-panel-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.speed-panel-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.speed-current-display {
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 0 0 12px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.speed-current-display::before {
+  content: 'Current Speed';
+  font-size: 13px;
+  color: #fff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.speed-current-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Speed Sections */
+.speed-section {
+  margin-bottom: 12px;
+}
+
+.speed-section:last-of-type {
+  margin-bottom: 16px;
+}
+
+.speed-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+/* Preset Buttons */
+.speed-presets {
+  display: grid;
+  gap: 6px;
+}
+
+.speed-group-slow {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.speed-group-normal {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.speed-group-fast {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+
+.speed-preset-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid transparent;
+  color: #fff;
+  padding: 10px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.speed-preset-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.speed-preset-btn:active {
+  transform: translateY(0);
+}
+
+.speed-preset-btn.active {
+  background: #3ea6ff;
+  border-color: #3ea6ff;
+  color: #000;
+  font-weight: 600;
+}
+
+.speed-preset-btn:focus-visible {
+  outline: 2px solid #3ea6ff;
+  outline-offset: 2px;
+}
+
+/* Slider */
+.speed-slider-container {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.speed-slider-wrapper {
+  position: relative;
+  padding-top: 30px;
+}
+
+.speed-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) - filled track effect */
+.speed-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Firefox - filled track effect */
+.speed-slider::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.speed-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #3ea6ff 0%, #5eb8ff 100%);
+}
+
+.speed-slider-tooltip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.275);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+.speed-slider-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid rgba(0, 0, 0, 0.275);
+}
+
+.speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3ea6ff;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: -5px; /* Centers 16px thumb on 6px track */
+  position: relative;
+}
+
+.speed-slider::-webkit-slider-thumb:hover {
+  background: #5eb8ff;
+  transform: scale(1.2);
+}
+
+.speed-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3ea6ff;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.speed-slider::-moz-range-thumb:hover {
+  background: #5eb8ff;
+  transform: scale(1.2);
+}
+
+.speed-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Action Buttons */
+.yt-custom-speed-panel .speed-actions {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.yt-custom-speed-panel .speed-reset-btn {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  padding: 10px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  font-family: "YouTube Sans", "Roboto", sans-serif !important;
+  transition: all 0.2s !important;
+  outline: none !important;
+  display: block !important;
+}
+
+.yt-custom-speed-panel .speed-reset-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+.yt-custom-speed-panel .speed-reset-btn:active {
+  transform: translateY(0) !important;
+}
+
+.yt-custom-speed-panel .speed-reset-btn:focus-visible {
+  outline: 2px solid #3ea6ff !important;
+  outline-offset: 2px !important;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.yt-custom-speed-panel[style*="display: block"] {
+  animation: slideIn 0.2s ease-out;
+}
+

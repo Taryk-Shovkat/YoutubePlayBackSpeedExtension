@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Speed Control</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      overflow: hidden;
+    }
+
+    body {
+      width: 320px;
+      max-height: 600px;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #fff;
+      padding: 20px;
+      padding-right: 16px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* Custom scrollbar styling */
+    body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    body::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+
+    body::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header h1 {
+      font-size: 20px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .header-icon {
+      width: 24px;
+      height: 24px;
+    }
+
+    .header p {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .current-speed-display {
+      background: rgba(255, 255, 255, 0.12);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin: 0 0 12px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .current-speed-display::before {
+      content: 'Current Speed';
+      font-size: 13px;
+      color: #fff;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .current-speed-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .speed-section {
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .presets {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 0;
+    }
+
+    .preset-group-slow {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .preset-group-normal {
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    .preset-group-fast {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid transparent;
+      color: #fff;
+      padding: 11px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+      outline: none;
+    }
+
+    .preset-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .preset-btn:active {
+      transform: translateY(0);
+    }
+
+    .preset-btn.active {
+      background: #3ea6ff;
+      border-color: #3ea6ff;
+      color: #000;
+      font-weight: 700;
+    }
+
+    .slider-container {
+      margin-bottom: 24px;
+      padding-top: 4px;
+    }
+
+    .slider-wrapper {
+      position: relative;
+      padding: 30px 0 8px 0;
+    }
+
+    .slider-tooltip {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.275);
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      pointer-events: none;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+
+    .slider-tooltip::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 4px solid rgba(0, 0, 0, 0.275);
+    }
+
+    .slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #3ea6ff;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      background: #5eb8ff;
+      transform: scale(1.2);
+    }
+
+    .slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #3ea6ff;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .slider::-moz-range-thumb:hover {
+      background: #5eb8ff;
+      transform: scale(1.2);
+    }
+
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .action-btn {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .error-message {
+      background: rgba(255, 69, 58, 0.1);
+      border: 1px solid rgba(255, 69, 58, 0.3);
+      color: #ff453a;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>
+      <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="13,7 13,17 18,12"/>
+        <polygon points="6,7 6,17 11,12"/>
+      </svg>
+      Speed Control
+    </h1>
+    <p>Custom YouTube Playback Speed</p>
+  </div>
+
+  <div class="error-message" id="errorMessage">
+    Please open a YouTube video to use speed controls.
+  </div>
+
+  <div class="speed-section">
+    <div class="section-title">Slow</div>
+    <div class="presets preset-group-slow">
+      <button class="preset-btn" data-speed="0.25">0.25x</button>
+      <button class="preset-btn" data-speed="0.5">0.5x</button>
+      <button class="preset-btn" data-speed="0.75">0.75x</button>
+    </div>
+  </div>
+
+  <div class="speed-section">
+    <div class="section-title">Normal</div>
+    <div class="presets preset-group-normal">
+      <button class="preset-btn" data-speed="1">1x</button>
+      <button class="preset-btn" data-speed="1.25">1.25x</button>
+      <button class="preset-btn" data-speed="1.5">1.5x</button>
+      <button class="preset-btn" data-speed="1.75">1.75x</button>
+      <button class="preset-btn" data-speed="2">2x</button>
+    </div>
+  </div>
+
+  <div class="speed-section">
+    <div class="section-title">Fast</div>
+    <div class="presets preset-group-fast">
+      <button class="preset-btn" data-speed="3">3x</button>
+      <button class="preset-btn" data-speed="4">4x</button>
+      <button class="preset-btn" data-speed="5">5x</button>
+      <button class="preset-btn" data-speed="10">10x</button>
+    </div>
+  </div>
+
+  <div class="slider-container">
+    <div class="current-speed-display">
+      <span class="current-speed-value" id="currentSpeed">1.0x</span>
+    </div>
+    <div class="section-title">Custom</div>
+    <div class="slider-wrapper">
+      <input 
+        type="range" 
+        class="slider" 
+        id="speedSlider"
+        min="0.2" 
+        max="10.0" 
+        step="0.2" 
+        value="1.0"
+      />
+      <div class="slider-tooltip" id="sliderTooltip">1.0x</div>
+    </div>
+    <div class="slider-labels">
+      <span>0.2x</span>
+      <span>10.0x</span>
+    </div>
+  </div>
+
+  <div class="quick-actions">
+    <button class="action-btn" id="resetBtn">Reset to 1x</button>
+  </div>
+
+  <div class="footer">
+    YouTube Custom Speed Control v1.0
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+
