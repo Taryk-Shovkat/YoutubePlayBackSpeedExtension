@@ -11,6 +11,10 @@ let speedButton = null;
 let observer = null;
 let isSliderActive = false; // Flag to prevent interference while using slider
 let saveSpeedTimeout = null; // Debounce timer for saving speed
+let lastManualSpeedChange = 0; // Timestamp of last manual speed change
+let lastVideoSpeedChange = 0; // Timestamp when video speed last changed (by anyone)
+let previousVideoSpeed = 1.0; // Track previous video speed
+let temporarySpeed = null; // Track if there's a temporary speed active (e.g., 2x from hold feature)
 
 // Load saved speed from storage
 async function loadSavedSpeed() {
@@ -53,6 +57,8 @@ function applySpeed(speed, skipSave = false) {
   if (video) {
     video.playbackRate = speed;
     currentSpeed = speed;
+    previousVideoSpeed = speed; // Keep tracking in sync
+    lastManualSpeedChange = Date.now(); // Mark when we manually changed speed
     if (!skipSave) {
       // Debounce saving to prevent rapid saves during slider movement
       if (saveSpeedTimeout) {
@@ -71,6 +77,27 @@ function getVideo() {
   return document.querySelector('video');
 }
 
+// Check if we should allow speed changes (for YouTube's native features)
+function shouldAllowSpeedChange(videoSpeed) {
+  // If we just manually changed the speed, don't allow overriding it
+  if (Date.now() - lastManualSpeedChange < 500) {
+    return false;
+  }
+  
+  // If there's a temporary speed active (YouTube's hold feature)
+  // and the current video speed matches it, allow it
+  if (temporarySpeed !== null && Math.abs(videoSpeed - temporarySpeed) < 0.01) {
+    return true;
+  }
+  
+  // If the video speed just changed (within last 1 second), allow it
+  if (Date.now() - lastVideoSpeedChange < 1000) {
+    return true;
+  }
+  
+  return false;
+}
+
 // Monitor video for speed resets (e.g., after ads)
 function monitorVideoSpeed() {
   const video = getVideo();
@@ -82,22 +109,89 @@ function monitorVideoSpeed() {
   });
 
   video.addEventListener('play', () => {
-    // Check if speed was reset
-    if (Math.abs(video.playbackRate - currentSpeed) > 0.01) {
+    const videoSpeed = video.playbackRate;
+    
+    // Allow speed changes if this matches temporary speed or recently changed
+    if (shouldAllowSpeedChange(videoSpeed)) return;
+    
+    // Check if speed was reset on play
+    if (Math.abs(videoSpeed - currentSpeed) > 0.01) {
       applySpeed(currentSpeed);
     }
   });
 
-  // Periodic check for speed resets
+  // Listen for rate changes directly - this detects when YouTube changes the speed
+  video.addEventListener('ratechange', () => {
+    // Don't track changes from our own slider
+    if (isSliderActive) return;
+    
+    const videoSpeed = video.playbackRate;
+    
+    // Check if this is a change we made
+    if (Date.now() - lastManualSpeedChange < 300) {
+      // We just changed it, update tracking and clear temporary speed
+      previousVideoSpeed = videoSpeed;
+      temporarySpeed = null;
+      return;
+    }
+    
+    // Check if speed actually changed
+    if (Math.abs(videoSpeed - previousVideoSpeed) > 0.01) {
+      // Speed changed and it wasn't us - mark the time
+      lastVideoSpeedChange = Date.now();
+      
+      const matchesSavedSpeed = Math.abs(videoSpeed - currentSpeed) < 0.01;
+      const wasTemporary = temporarySpeed !== null;
+      
+      if (!matchesSavedSpeed) {
+        // Speed changed to something other than our saved speed
+        
+        if (wasTemporary && Math.abs(videoSpeed - temporarySpeed) > 0.01) {
+          // We were in temporary mode and speed changed to yet another value
+          // This likely means YouTube ended temporary mode and reset to 1x
+          // Clear temporary and schedule a restoration
+          temporarySpeed = null;
+          setTimeout(() => {
+            const vid = getVideo();
+            if (vid && Math.abs(vid.playbackRate - currentSpeed) > 0.01) {
+              applySpeed(currentSpeed);
+            }
+          }, 100);
+        } else {
+          // Entering temporary speed mode (e.g., hold to 2x)
+          temporarySpeed = videoSpeed;
+        }
+      } else {
+        // Speed returned to our saved speed - clear temporary speed
+        temporarySpeed = null;
+      }
+      
+      previousVideoSpeed = videoSpeed;
+    }
+  });
+
+  // Periodic check for speed resets (backup for when ratechange doesn't fire)
   setInterval(() => {
     // Don't interfere while user is actively using the slider
     if (isSliderActive) return;
     
     const video = getVideo();
-    if (video && Math.abs(video.playbackRate - currentSpeed) > 0.01) {
+    if (!video) return;
+    
+    const videoSpeed = video.playbackRate;
+    
+    // Don't interfere if this matches temporary speed or recently changed
+    if (shouldAllowSpeedChange(videoSpeed)) return;
+    
+    // Normal check for speed resets (e.g., after ads)
+    if (Math.abs(videoSpeed - currentSpeed) > 0.01) {
+      // Speed is wrong and not protected - reset it
       video.playbackRate = currentSpeed;
+      previousVideoSpeed = currentSpeed;
+      temporarySpeed = null;
+      lastManualSpeedChange = Date.now();
     }
-  }, 1000);
+  }, 1000); // Check every second as a backup
 }
 
 // Create speed control button
@@ -562,7 +656,14 @@ function setupMutationObserver() {
     
     // Check if video changed, reapply speed
     const video = getVideo();
-    if (video && Math.abs(video.playbackRate - currentSpeed) > 0.01) {
+    if (!video) return;
+    
+    const videoSpeed = video.playbackRate;
+    
+    // Don't interfere if this matches temporary speed or recently changed
+    if (shouldAllowSpeedChange(videoSpeed)) return;
+    
+    if (Math.abs(videoSpeed - currentSpeed) > 0.01) {
       setTimeout(() => applySpeed(currentSpeed), 100);
     }
   });
