@@ -493,7 +493,7 @@ function injectSpeedControls() {
 // Wait for YouTube player to load
 function waitForPlayer() {
   let attempts = 0;
-  const maxAttempts = 60; // 30 seconds total
+  const maxAttempts = 80; // 40 seconds total
   
   const checkInterval = setInterval(() => {
     attempts++;
@@ -521,6 +521,11 @@ function waitForPlayer() {
       clearInterval(checkInterval);
     }
   }, 500);
+}
+
+// Check if we're on a video page
+function isVideoPage() {
+  return window.location.pathname === '/watch' || window.location.href.includes('/watch?');
 }
 
 // Re-inject controls (called on navigation)
@@ -636,17 +641,43 @@ function handleYouTubeNavigation() {
 (async function init() {
   await loadSavedSpeed();
   
+  // Function to start watching for player
+  function startWatching() {
+    // Only start watching if we're on a video page
+    if (isVideoPage()) {
+      waitForPlayer();
+    }
+  }
+  
   // Wait for page to be ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', waitForPlayer);
+    document.addEventListener('DOMContentLoaded', startWatching);
   } else {
-    waitForPlayer();
+    // Try immediately
+    startWatching();
   }
   
   // Listen for YouTube's SPA navigation events
   // YouTube fires these custom events when navigating between videos
-  document.addEventListener('yt-navigate-finish', handleYouTubeNavigation);
-  document.addEventListener('yt-page-data-updated', handleYouTubeNavigation);
+  document.addEventListener('yt-navigate-finish', () => {
+    if (isVideoPage()) {
+      handleYouTubeNavigation();
+    }
+  });
+  
+  document.addEventListener('yt-page-data-updated', () => {
+    if (isVideoPage()) {
+      handleYouTubeNavigation();
+    }
+  });
+  
+  // Listen for when YouTube app becomes ready (fires on initial load)
+  document.addEventListener('yt-navigate-start', () => {
+    if (isVideoPage()) {
+      // Wait a bit for the player to load
+      setTimeout(startWatching, 1000);
+    }
+  });
   
   // Also listen for URL changes (backup method)
   let lastUrl = location.href;
@@ -660,6 +691,28 @@ function handleYouTubeNavigation() {
       }
     }
   }).observe(document, { subtree: true, childList: true });
+  
+  // Additional listener: Watch for video element being added (throttled)
+  let videoCheckTimeout = null;
+  const videoObserver = new MutationObserver((mutations) => {
+    if (videoCheckTimeout) return; // Throttle
+    
+    if (isVideoPage() && !document.querySelector('.yt-custom-speed-button')) {
+      const video = document.querySelector('video');
+      if (video && !speedButton) {
+        // Video element exists but button doesn't, try to inject
+        videoCheckTimeout = setTimeout(() => {
+          waitForPlayer();
+          videoCheckTimeout = null;
+        }, 1000);
+      }
+    }
+  });
+  
+  videoObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
   
   // Event listeners
   document.addEventListener('fullscreenchange', handleFullscreenChange);
