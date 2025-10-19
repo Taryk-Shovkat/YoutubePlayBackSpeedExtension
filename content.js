@@ -53,28 +53,65 @@ function saveSpeed(speed) {
 
 // Apply speed to video element
 function applySpeed(speed, skipSave = false) {
-  const video = document.querySelector('video');
-  if (video) {
-    video.playbackRate = speed;
-    currentSpeed = speed;
-    previousVideoSpeed = speed; // Keep tracking in sync
-    lastManualSpeedChange = Date.now(); // Mark when we manually changed speed
-    if (!skipSave) {
-      // Debounce saving to prevent rapid saves during slider movement
-      if (saveSpeedTimeout) {
-        clearTimeout(saveSpeedTimeout);
-      }
-      saveSpeedTimeout = setTimeout(() => {
-        saveSpeed(speed);
-      }, 300); // Save after 300ms of no changes
-    }
-    updateSpeedDisplay();
+  // Get video from the main player
+  const mainPlayer = document.querySelector('#movie_player');
+  const video = mainPlayer ? mainPlayer.querySelector('video') : document.querySelector('video');
+  
+  if (!video) {
+    console.log('[YT Speed] No video element found to apply speed');
+    return;
   }
+  
+  // Check if video is ready to accept playback rate changes
+  if (video.readyState < 1) {
+    console.log('[YT Speed] Video not ready (readyState:', video.readyState + '), will retry when ready');
+    // Wait for video to be ready
+    const applyWhenReady = () => {
+      if (video.readyState >= 1) {
+        console.log('[YT Speed] Video now ready, applying speed:', speed);
+        video.playbackRate = speed;
+        currentSpeed = speed;
+        previousVideoSpeed = speed;
+        lastManualSpeedChange = Date.now();
+        if (!skipSave) {
+          if (saveSpeedTimeout) clearTimeout(saveSpeedTimeout);
+          saveSpeedTimeout = setTimeout(() => saveSpeed(speed), 300);
+        }
+        updateSpeedDisplay();
+      }
+    };
+    video.addEventListener('loadedmetadata', applyWhenReady, { once: true });
+    video.addEventListener('canplay', applyWhenReady, { once: true });
+    // Also try after a delay as fallback
+    setTimeout(() => {
+      if (video.readyState >= 1) applyWhenReady();
+    }, 500);
+    return;
+  }
+  
+  // Video is ready, apply immediately
+  video.playbackRate = speed;
+  currentSpeed = speed;
+  previousVideoSpeed = speed; // Keep tracking in sync
+  lastManualSpeedChange = Date.now(); // Mark when we manually changed speed
+  console.log('[YT Speed] Speed applied:', speed, 'readyState:', video.readyState);
+  
+  if (!skipSave) {
+    // Debounce saving to prevent rapid saves during slider movement
+    if (saveSpeedTimeout) {
+      clearTimeout(saveSpeedTimeout);
+    }
+    saveSpeedTimeout = setTimeout(() => {
+      saveSpeed(speed);
+    }, 300); // Save after 300ms of no changes
+  }
+  updateSpeedDisplay();
 }
 
-// Get current video element
+// Get current video element (prefer main player)
 function getVideo() {
-  return document.querySelector('video');
+  const mainPlayer = document.querySelector('#movie_player');
+  return mainPlayer ? mainPlayer.querySelector('video') : document.querySelector('video');
 }
 
 // Check if we should allow speed changes (for YouTube's native features)
@@ -449,14 +486,38 @@ function toggleSpeedPanel() {
 
 // Adjust panel size based on player dimensions
 function adjustPanelResponsiveness() {
-  if (!speedPanel) return;
+  console.log('[YT Speed] adjustPanelResponsiveness() called');
   
-  const playerContainer = document.querySelector('.html5-video-player');
-  if (!playerContainer) return;
+  if (!speedPanel) {
+    console.log('[YT Speed] No speedPanel to adjust');
+    return;
+  }
+  
+  // Get the main player
+  const playerContainer = document.querySelector('#movie_player');
+  if (!playerContainer) {
+    console.log('[YT Speed] No #movie_player found for sizing');
+    return;
+  }
   
   const playerRect = playerContainer.getBoundingClientRect();
   const playerWidth = playerRect.width;
   const playerHeight = playerRect.height;
+  
+  console.log('[YT Speed] Player dimensions for panel sizing:', playerWidth + 'x' + playerHeight);
+  
+  // If player dimensions are invalid (0 or very small), don't adjust yet
+  if (playerWidth < 100 || playerHeight < 100) {
+    console.log('[YT Speed] Player dimensions too small, skipping adjustment');
+    // Set default sizing as fallback
+    speedPanel.style.minWidth = '320px';
+    speedPanel.style.maxWidth = '320px';
+    speedPanel.style.right = '50px';
+    speedPanel.style.left = 'auto';
+    speedPanel.style.bottom = '75px';
+    speedPanel.style.maxHeight = '700px';
+    return;
+  }
   
   // Remove existing responsive classes
   speedPanel.classList.remove('panel-compact', 'panel-mini', 'panel-full');
@@ -464,6 +525,7 @@ function adjustPanelResponsiveness() {
   // Apply size adjustments based on player dimensions
   if (playerWidth < 380) {
     // Very small - full width
+    console.log('[YT Speed] Applying panel-full class');
     speedPanel.classList.add('panel-full');
     speedPanel.style.minWidth = `${playerWidth - 20}px`;
     speedPanel.style.maxWidth = `${playerWidth - 20}px`;
@@ -472,6 +534,7 @@ function adjustPanelResponsiveness() {
     speedPanel.style.bottom = '70px'; // Higher to avoid progress bar
   } else if (playerWidth < 500) {
     // Small - compact
+    console.log('[YT Speed] Applying panel-compact class (small)');
     speedPanel.classList.add('panel-compact');
     speedPanel.style.minWidth = '260px';
     speedPanel.style.maxWidth = '260px';
@@ -480,6 +543,7 @@ function adjustPanelResponsiveness() {
     speedPanel.style.bottom = '75px'; // Higher to avoid progress bar
   } else if (playerWidth < 768) {
     // Medium
+    console.log('[YT Speed] Applying panel-compact class (medium)');
     speedPanel.classList.add('panel-compact');
     speedPanel.style.minWidth = '280px';
     speedPanel.style.maxWidth = '280px';
@@ -488,6 +552,7 @@ function adjustPanelResponsiveness() {
     speedPanel.style.bottom = '75px'; // Consistent positioning
   } else {
     // Large - default
+    console.log('[YT Speed] Applying default (large) sizing');
     speedPanel.style.minWidth = '320px';
     speedPanel.style.maxWidth = '320px';
     speedPanel.style.right = '50px';
@@ -506,14 +571,28 @@ function adjustPanelResponsiveness() {
     speedPanel.style.maxHeight = '700px';
     // Keep bottom from width-based adjustments
   }
+  
+  console.log('[YT Speed] Panel styled - minWidth:', speedPanel.style.minWidth, 'maxWidth:', speedPanel.style.maxWidth);
 }
 
 // Show speed panel
 function showSpeedPanel() {
   if (!speedPanel) return;
   
-  adjustPanelResponsiveness();
+  console.log('[YT Speed] showSpeedPanel() called');
+  
+  // Make panel visible first
   speedPanel.style.display = 'block';
+  console.log('[YT Speed] Panel set to display: block');
+  
+  // Adjust sizing (now that it's visible, dimensions should calculate correctly)
+  adjustPanelResponsiveness();
+  
+  // Check actual rendered dimensions
+  const panelRect = speedPanel.getBoundingClientRect();
+  console.log('[YT Speed] Panel actual dimensions after adjustment:', panelRect.width + 'x' + panelRect.height);
+  console.log('[YT Speed] Panel computed styles - width:', window.getComputedStyle(speedPanel).width, 'minWidth:', window.getComputedStyle(speedPanel).minWidth);
+  
   updateSlider(currentSpeed); // This will also update the fill
   updateActivePreset(currentSpeed);
   updateSpeedDisplay();
@@ -542,52 +621,116 @@ function positionSpeedPanel() {
 
 // Inject custom controls into YouTube player
 function injectSpeedControls() {
-  // Find the right controls container
-  const rightControls = document.querySelector('.ytp-right-controls');
+  console.log('[YT Speed] injectSpeedControls() called');
+  
+  // CRITICAL: Only inject into the MAIN video player (#movie_player)
+  // YouTube has preview players (#c4-player, etc.) that we should ignore
+  const mainPlayer = document.querySelector('#movie_player');
+  console.log('[YT Speed] Main player (#movie_player) found:', !!mainPlayer);
+  
+  if (!mainPlayer) {
+    console.log('[YT Speed] Main video player not found, skipping injection');
+    return false;
+  }
+  
+  // Check if player is actually initialized (not in a hidden/unstarted state)
+  // The player should have proper dimensions and the controls should be visible
+  const playerRect = mainPlayer.getBoundingClientRect();
+  const hasValidDimensions = playerRect.width > 100 && playerRect.height > 100;
+  console.log('[YT Speed] Player dimensions:', playerRect.width + 'x' + playerRect.height, 'valid:', hasValidDimensions);
+  
+  if (!hasValidDimensions) {
+    console.log('[YT Speed] Player not properly sized yet, waiting...');
+    return false;
+  }
+  
+  // Find the right controls container WITHIN the main player
+  const rightControls = mainPlayer.querySelector('.ytp-right-controls');
+  console.log('[YT Speed] rightControls in main player found:', !!rightControls);
   
   if (!rightControls) {
+    console.log('[YT Speed] Controls not found in main player, waiting...');
+    return false;
+  }
+  
+  // Verify the video element exists and is ready
+  const video = mainPlayer.querySelector('video');
+  console.log('[YT Speed] Video element found:', !!video, 'readyState:', video ? video.readyState : 'N/A');
+  
+  if (!video || video.readyState < 1) {
+    console.log('[YT Speed] Video not ready yet, waiting...');
     return false;
   }
   
   // Check if already injected and still valid
   const existingButton = document.querySelector('.yt-custom-speed-button');
+  console.log('[YT Speed] existingButton:', !!existingButton, 'speedButton:', !!speedButton);
+  
   if (existingButton && speedButton && existingButton === speedButton) {
     // Already properly injected
+    console.log('[YT Speed] Already injected');
     return true;
   }
   
   // Remove any orphaned buttons/panels
-  document.querySelectorAll('.yt-custom-speed-button').forEach(el => el.remove());
-  document.querySelectorAll('.yt-custom-speed-panel').forEach(el => el.remove());
+  const orphanedButtons = document.querySelectorAll('.yt-custom-speed-button');
+  const orphanedPanels = document.querySelectorAll('.yt-custom-speed-panel');
+  console.log('[YT Speed] Removing orphans - buttons:', orphanedButtons.length, 'panels:', orphanedPanels.length);
+  orphanedButtons.forEach(el => el.remove());
+  orphanedPanels.forEach(el => el.remove());
   
   // Create button
+  console.log('[YT Speed] Creating speed button...');
   speedButton = createSpeedButton();
+  console.log('[YT Speed] Button created:', !!speedButton);
   
   // Insert before the settings button (or at the beginning)
   const settingsButton = rightControls.querySelector('.ytp-settings-button');
+  console.log('[YT Speed] Settings button found:', !!settingsButton);
+  
   if (settingsButton) {
     rightControls.insertBefore(speedButton, settingsButton);
+    console.log('[YT Speed] Button inserted before settings');
   } else {
     rightControls.insertBefore(speedButton, rightControls.firstChild);
+    console.log('[YT Speed] Button inserted at beginning');
   }
   
-  // Create and add panel to player container (like YouTube's native menus)
+  // Verify button was actually added to DOM
+  const buttonInDom = document.querySelector('.yt-custom-speed-button');
+  console.log('[YT Speed] Button in DOM after insert:', !!buttonInDom);
+  console.log('[YT Speed] Button parent:', buttonInDom ? buttonInDom.parentElement : 'none');
+  
+  // Create and add panel to main player container (like YouTube's native menus)
+  console.log('[YT Speed] Creating speed panel...');
   speedPanel = createSpeedPanel();
-  const playerContainer = document.querySelector('.html5-video-player');
-  if (playerContainer) {
-    playerContainer.appendChild(speedPanel);
-  } else {
-    // Fallback to body if player container not found
-    document.body.appendChild(speedPanel);
-  }
+  console.log('[YT Speed] Panel created:', !!speedPanel);
   
+  // Append to the main player (we already verified it exists at the start of this function)
+  mainPlayer.appendChild(speedPanel);
+  console.log('[YT Speed] Panel appended to main player (#movie_player)');
+  
+  // Verify panel was actually added to DOM
+  const panelInDom = document.querySelector('.yt-custom-speed-panel');
+  console.log('[YT Speed] Panel in DOM after append:', !!panelInDom);
+  console.log('[YT Speed] Panel parent:', panelInDom ? panelInDom.parentElement : 'none');
+  console.log('[YT Speed] Panel parent ID:', panelInDom && panelInDom.parentElement ? panelInDom.parentElement.id : 'none');
+  
+  // Adjust panel responsiveness after a tiny delay to ensure DOM is fully updated
+  // This prevents the panel from being a thin stripe
+  setTimeout(() => {
+    adjustPanelResponsiveness();
+    console.log('[YT Speed] Panel responsiveness adjusted (delayed)');
+  }, 50);
+  
+  console.log('[YT Speed] Controls injected successfully at speed:', currentSpeed);
   return true;
 }
 
 // Wait for YouTube player to load
 function waitForPlayer() {
   let attempts = 0;
-  const maxAttempts = 80; // 40 seconds total
+  const maxAttempts = 100; // 50 seconds total (increased)
   
   const checkInterval = setInterval(() => {
     attempts++;
@@ -678,10 +821,10 @@ function setupMutationObserver() {
 function handleFullscreenChange() {
   if (!speedPanel) return;
   
-  // Re-attach panel to the correct container
-  const playerContainer = document.querySelector('.html5-video-player');
-  if (playerContainer && !playerContainer.contains(speedPanel)) {
-    playerContainer.appendChild(speedPanel);
+  // Re-attach panel to the main player
+  const mainPlayer = document.querySelector('#movie_player');
+  if (mainPlayer && !mainPlayer.contains(speedPanel)) {
+    mainPlayer.appendChild(speedPanel);
   }
 }
 
@@ -738,99 +881,219 @@ function handleYouTubeNavigation() {
   reinjectControls();
 }
 
+// Persistent checker to ensure controls are always injected on video pages
+function startPersistentChecker() {
+  let checkCount = 0;
+  console.log('[YT Speed] Starting persistent checker');
+  
+  // More aggressive checking initially (every 500ms for first 30 seconds)
+  // Then back off to every 3 seconds
+  const checker = setInterval(() => {
+    checkCount++;
+    
+    if (isVideoPage() && !document.querySelector('.yt-custom-speed-button')) {
+      const mainPlayer = document.querySelector('#movie_player');
+      const rightControls = mainPlayer ? mainPlayer.querySelector('.ytp-right-controls') : null;
+      const video = mainPlayer ? mainPlayer.querySelector('video') : null;
+      
+      if (checkCount <= 5 || checkCount % 10 === 0) {
+        console.log('[YT Speed] Check #' + checkCount + ': mainPlayer=' + !!mainPlayer + ', rightControls=' + !!rightControls + ', video=' + !!video);
+      }
+      
+      // Only try to inject if the MAIN player controls are actually present
+      if (mainPlayer && rightControls && video) {
+        console.log('[YT Speed] Found main player controls, injecting...');
+        injectSpeedControls();
+        
+        // Apply saved speed if not already applied
+        if (Math.abs(video.playbackRate - currentSpeed) > 0.01) {
+          applySpeed(currentSpeed);
+        }
+        
+        // Setup monitoring if not already done
+        if (!observer) {
+          setupMutationObserver();
+        }
+      }
+    }
+    
+    // After 30 seconds (60 checks at 500ms), switch to slower checking
+    if (checkCount === 60) {
+      console.log('[YT Speed] Switching to slower checking interval');
+      clearInterval(checker);
+      // Continue with less frequent checks
+      setInterval(() => {
+        if (isVideoPage() && !document.querySelector('.yt-custom-speed-button')) {
+          const mainPlayer = document.querySelector('#movie_player');
+          const rightControls = mainPlayer ? mainPlayer.querySelector('.ytp-right-controls') : null;
+          const video = mainPlayer ? mainPlayer.querySelector('video') : null;
+          
+          if (mainPlayer && rightControls && video) {
+            injectSpeedControls();
+            if (Math.abs(video.playbackRate - currentSpeed) > 0.01) {
+              applySpeed(currentSpeed);
+            }
+            if (!observer) {
+              setupMutationObserver();
+            }
+          }
+        }
+      }, 3000);
+    }
+  }, 500); // Check every 500ms initially
+}
+
+// Wait for body to exist before setting up observers
+function ensureBodyExists(callback) {
+  if (document.body) {
+    callback();
+  } else {
+    // Wait for body to be available
+    const bodyObserver = new MutationObserver(() => {
+      if (document.body) {
+        bodyObserver.disconnect();
+        callback();
+      }
+    });
+    bodyObserver.observe(document.documentElement, { childList: true });
+  }
+}
+
 // Initialize
 (async function init() {
+  console.log('[YT Speed] Extension loading...');
+  console.log('[YT Speed] Current URL:', window.location.href);
+  console.log('[YT Speed] Document state:', document.readyState);
+  
   await loadSavedSpeed();
+  console.log('[YT Speed] Loaded saved speed:', currentSpeed);
   
   // Function to start watching for player
   function startWatching() {
     // Only start watching if we're on a video page
     if (isVideoPage()) {
+      console.log('[YT Speed] On video page, starting to watch for player');
       waitForPlayer();
+    } else {
+      console.log('[YT Speed] Not on video page, URL:', window.location.href);
     }
   }
   
-  // Wait for page to be ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startWatching);
-  } else {
-    // Try immediately
-    startWatching();
-  }
-  
-  // Listen for YouTube's SPA navigation events
-  // YouTube fires these custom events when navigating between videos
-  document.addEventListener('yt-navigate-finish', () => {
-    if (isVideoPage()) {
-      handleYouTubeNavigation();
-    }
-  });
-  
-  document.addEventListener('yt-page-data-updated', () => {
-    if (isVideoPage()) {
-      handleYouTubeNavigation();
-    }
-  });
-  
-  // Listen for when YouTube app becomes ready (fires on initial load)
-  document.addEventListener('yt-navigate-start', () => {
-    if (isVideoPage()) {
-      // Wait a bit for the player to load
-      setTimeout(startWatching, 1000);
-    }
-  });
-  
-  // Also listen for URL changes (backup method)
-  let lastUrl = location.href;
-  new MutationObserver(() => {
-    const currentUrl = location.href;
-    if (currentUrl !== lastUrl) {
-      lastUrl = currentUrl;
-      // Only reinject if we're on a watch page
-      if (currentUrl.includes('/watch')) {
-        reinjectControls();
+  // Function to set up all observers and listeners
+  function setupObserversAndListeners() {
+    // Listen for YouTube's SPA navigation events
+    // YouTube fires these custom events when navigating between videos
+    document.addEventListener('yt-navigate-finish', () => {
+      if (isVideoPage()) {
+        handleYouTubeNavigation();
       }
-    }
-  }).observe(document, { subtree: true, childList: true });
-  
-  // Additional listener: Watch for video element being added (throttled)
-  let videoCheckTimeout = null;
-  const videoObserver = new MutationObserver((mutations) => {
-    if (videoCheckTimeout) return; // Throttle
+    });
     
-    if (isVideoPage() && !document.querySelector('.yt-custom-speed-button')) {
-      const video = document.querySelector('video');
-      if (video && !speedButton) {
-        // Video element exists but button doesn't, try to inject
-        videoCheckTimeout = setTimeout(() => {
-          waitForPlayer();
-          videoCheckTimeout = null;
-        }, 1000);
+    document.addEventListener('yt-page-data-updated', () => {
+      if (isVideoPage()) {
+        handleYouTubeNavigation();
       }
+    });
+    
+    // Listen for when YouTube app becomes ready (fires on initial load)
+    document.addEventListener('yt-navigate-start', () => {
+      if (isVideoPage()) {
+        // Wait a bit for the player to load
+        setTimeout(startWatching, 1000);
+      }
+    });
+    
+    // Also listen for URL changes (backup method)
+    let lastUrl = location.href;
+    new MutationObserver(() => {
+      const currentUrl = location.href;
+      if (currentUrl !== lastUrl) {
+        lastUrl = currentUrl;
+        // Only reinject if we're on a watch page
+        if (currentUrl.includes('/watch')) {
+          reinjectControls();
+        }
+      }
+    }).observe(document, { subtree: true, childList: true });
+    
+    // Additional listener: Watch for video element and controls being added
+    let videoCheckTimeout = null;
+    const videoObserver = new MutationObserver((mutations) => {
+      // Check if controls appeared in the MAIN player
+      if (isVideoPage() && !document.querySelector('.yt-custom-speed-button')) {
+        const mainPlayer = document.querySelector('#movie_player');
+        const rightControls = mainPlayer ? mainPlayer.querySelector('.ytp-right-controls') : null;
+        const video = mainPlayer ? mainPlayer.querySelector('video') : null;
+        
+        if (mainPlayer && rightControls && video) {
+          // Both main player, controls and video exist, inject immediately
+          if (injectSpeedControls()) {
+            applySpeed(currentSpeed);
+            monitorVideoSpeed();
+            if (!observer) {
+              setupMutationObserver();
+            }
+          }
+        } else if (mainPlayer && video && !speedButton && !videoCheckTimeout) {
+          // Main player and video exist but controls don't yet, wait a bit
+          videoCheckTimeout = setTimeout(() => {
+            waitForPlayer();
+            videoCheckTimeout = null;
+          }, 500); // Reduced from 1000ms to 500ms
+        }
+      }
+    });
+    
+    videoObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    
+    // Event listeners
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('click', handleOutsideClick);
+    window.addEventListener('resize', handleResize);
+    
+    // Global mouseup/touchend to ensure slider flag is cleared even if released outside
+    document.addEventListener('mouseup', () => {
+      if (isSliderActive) {
+        isSliderActive = false;
+      }
+    });
+    
+    document.addEventListener('touchend', () => {
+      if (isSliderActive) {
+        isSliderActive = false;
+      }
+    });
+  }
+  
+  // Ensure body exists before proceeding
+  ensureBodyExists(() => {
+    // Start watching for player immediately
+    startWatching();
+    
+    // Start the persistent checker (safety net)
+    startPersistentChecker();
+    
+    // Set up all observers and listeners
+    setupObserversAndListeners();
+    
+    // Wait for page to be fully ready (additional safety)
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startWatching);
     }
-  });
-  
-  videoObserver.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
-  
-  // Event listeners
-  document.addEventListener('fullscreenchange', handleFullscreenChange);
-  document.addEventListener('click', handleOutsideClick);
-  window.addEventListener('resize', handleResize);
-  
-  // Global mouseup/touchend to ensure slider flag is cleared even if released outside
-  document.addEventListener('mouseup', () => {
-    if (isSliderActive) {
-      isSliderActive = false;
+    
+    // Also try when window fully loads (for fresh browser starts)
+    if (document.readyState !== 'complete') {
+      window.addEventListener('load', () => {
+        setTimeout(startWatching, 500);
+      });
     }
-  });
-  
-  document.addEventListener('touchend', () => {
-    if (isSliderActive) {
-      isSliderActive = false;
-    }
+    
+    // Try again after a short delay (helps with fresh browser starts)
+    setTimeout(startWatching, 2000);
+    setTimeout(startWatching, 4000);
   });
 })();
 
