@@ -120,6 +120,7 @@ chrome-youtube-extension/
 ## Troubleshooting
 
 ### Button doesn't appear
+- **New YouTube UI**: If you just updated to the latest YouTube version, make sure you're using extension version 1.3.1 or later
 - **Most common fix**: Refresh the YouTube page - the extension should auto-inject within 1-2 seconds
 - Check if the extension is enabled in `chrome://extensions/`
 - Make sure you're on a YouTube video page (not homepage or search results)
@@ -171,6 +172,13 @@ This extension:
 
 ## Recent Improvements (Latest Version)
 
+### Version 1.3.1 - YouTube UI Compatibility Update
+✅ **Updated for new YouTube UI** - Fixed button not appearing after recent YouTube player updates  
+✅ **Enhanced selector fallbacks** - Multiple fallback selectors ensure compatibility with UI changes  
+✅ **More resilient injection** - Improved detection of player controls across different YouTube versions  
+✅ **Better reliability** - Works with both old and new YouTube player structures  
+
+### Previous Improvements
 ✅ **Fixed slider glitch** - No more erratic jumping or uncontrollable slider behavior  
 ✅ **Visual slider feedback** - Blue color fill shows speed intensity  
 ✅ **Fully responsive** - Adapts to any screen size automatically  

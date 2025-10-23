@@ -240,7 +240,7 @@ function createSpeedButton() {
   
   // Add SVG icon (double arrow representing speed)
   button.innerHTML = `
-    <svg height="100%" version="1.1" viewBox="0 0 24 24" width="100%">
+    <svg version="1.1" viewBox="0 0 24 24">
       <g fill="white">
         <polygon points="13,7 13,17 18,12"/>
         <polygon points="6,7 6,17 11,12"/>
@@ -645,8 +645,42 @@ function injectSpeedControls() {
   }
   
   // Find the right controls container WITHIN the main player
-  const rightControls = mainPlayer.querySelector('.ytp-right-controls');
+  let rightControls = findRightControls(mainPlayer);
   console.log('[YT Speed] rightControls in main player found:', !!rightControls);
+  
+  // If not found, try alternative approach: find any controls container with buttons
+  if (!rightControls) {
+    console.log('[YT Speed] Trying alternative approach to find controls...');
+    
+    // Look for controls bar
+    const controlsBar = mainPlayer.querySelector('.ytp-chrome-controls');
+    if (controlsBar) {
+      console.log('[YT Speed] Found controls bar, looking for button containers...');
+      // Try to find any div with buttons inside the controls
+      const buttonContainers = controlsBar.querySelectorAll('div[class*="controls"]');
+      console.log('[YT Speed] Found', buttonContainers.length, 'button containers');
+      
+      // Find one that contains buttons (likely the right controls)
+      for (const container of buttonContainers) {
+        const buttons = container.querySelectorAll('button');
+        if (buttons.length > 0) {
+          console.log('[YT Speed] Found container with', buttons.length, 'buttons, class:', container.className);
+          // Check if this looks like the right controls (has settings or fullscreen button)
+          const hasSettingsOrFullscreen = Array.from(buttons).some(btn => 
+            btn.className.includes('settings') || 
+            btn.className.includes('fullscreen') ||
+            btn.getAttribute('aria-label')?.toLowerCase().includes('settings') ||
+            btn.getAttribute('aria-label')?.toLowerCase().includes('fullscreen')
+          );
+          if (hasSettingsOrFullscreen) {
+            rightControls = container;
+            console.log('[YT Speed] Using this container as rightControls');
+            break;
+          }
+        }
+      }
+    }
+  }
   
   if (!rightControls) {
     console.log('[YT Speed] Controls not found in main player, waiting...');
@@ -684,16 +718,37 @@ function injectSpeedControls() {
   speedButton = createSpeedButton();
   console.log('[YT Speed] Button created:', !!speedButton);
   
-  // Insert before the settings button (or at the beginning)
-  const settingsButton = rightControls.querySelector('.ytp-settings-button');
-  console.log('[YT Speed] Settings button found:', !!settingsButton);
+  // Insert the button safely
+  console.log('[YT Speed] v1.3.3 - Attempting safe button insertion...');
   
-  if (settingsButton) {
-    rightControls.insertBefore(speedButton, settingsButton);
-    console.log('[YT Speed] Button inserted before settings');
+  // YouTube's new UI has sub-containers: ytp-right-controls-left and ytp-right-controls-right
+  // We want to insert into the right side container (where settings/fullscreen buttons are)
+  let targetContainer = rightControls.querySelector('.ytp-right-controls-right');
+  
+  if (!targetContainer) {
+    // Fallback to main container if sub-container doesn't exist
+    targetContainer = rightControls;
+    console.log('[YT Speed] Using main rightControls as target (no sub-container found)');
   } else {
-    rightControls.insertBefore(speedButton, rightControls.firstChild);
-    console.log('[YT Speed] Button inserted at beginning');
+    console.log('[YT Speed] Found ytp-right-controls-right sub-container');
+  }
+  
+  try {
+    // Try to insert before the first button in the target container (settings button)
+    const firstButton = targetContainer.querySelector('button');
+    if (firstButton && firstButton.parentElement === targetContainer) {
+      targetContainer.insertBefore(speedButton, firstButton);
+      console.log('[YT Speed] Button inserted before first button in container');
+    } else {
+      // Fallback: prepend to the target container
+      targetContainer.insertBefore(speedButton, targetContainer.firstChild);
+      console.log('[YT Speed] Button prepended to container');
+    }
+  } catch (error) {
+    // Final fallback: just append
+    console.warn('[YT Speed] Insert failed, appending instead:', error);
+    targetContainer.appendChild(speedButton);
+    console.log('[YT Speed] Button appended to container');
   }
   
   // Verify button was actually added to DOM
@@ -758,6 +813,36 @@ function waitForPlayer() {
       clearInterval(checkInterval);
     }
   }, 500);
+}
+
+// Helper function to find right controls with fallbacks
+function findRightControls(mainPlayer) {
+  if (!mainPlayer) return null;
+  
+  // Try primary selector
+  let rightControls = mainPlayer.querySelector('.ytp-right-controls');
+  
+  // Try alternate selectors for newer YouTube versions
+  if (!rightControls) {
+    rightControls = mainPlayer.querySelector('.ytp-chrome-controls .ytp-right-controls');
+  }
+  if (!rightControls) {
+    rightControls = mainPlayer.querySelector('[class*="right-controls"]');
+  }
+  
+  // Debug: Log what we found
+  if (rightControls) {
+    console.log('[YT Speed] Found rightControls with class:', rightControls.className);
+    console.log('[YT Speed] rightControls children count:', rightControls.children.length);
+    console.log('[YT Speed] rightControls children classes:', Array.from(rightControls.children).map(c => c.className).join(', '));
+  } else {
+    // If still not found, log available controls structures for debugging
+    const allControls = mainPlayer.querySelectorAll('[class*="controls"]');
+    console.warn('[YT Speed] Could not find right-controls. Available control elements:', 
+      Array.from(allControls).map(el => el.className).join(', '));
+  }
+  
+  return rightControls;
 }
 
 // Check if we're on a video page
@@ -893,7 +978,7 @@ function startPersistentChecker() {
     
     if (isVideoPage() && !document.querySelector('.yt-custom-speed-button')) {
       const mainPlayer = document.querySelector('#movie_player');
-      const rightControls = mainPlayer ? mainPlayer.querySelector('.ytp-right-controls') : null;
+      const rightControls = findRightControls(mainPlayer);
       const video = mainPlayer ? mainPlayer.querySelector('video') : null;
       
       if (checkCount <= 5 || checkCount % 10 === 0) {
@@ -925,7 +1010,7 @@ function startPersistentChecker() {
       setInterval(() => {
         if (isVideoPage() && !document.querySelector('.yt-custom-speed-button')) {
           const mainPlayer = document.querySelector('#movie_player');
-          const rightControls = mainPlayer ? mainPlayer.querySelector('.ytp-right-controls') : null;
+          const rightControls = findRightControls(mainPlayer);
           const video = mainPlayer ? mainPlayer.querySelector('video') : null;
           
           if (mainPlayer && rightControls && video) {
@@ -1022,7 +1107,7 @@ function ensureBodyExists(callback) {
       // Check if controls appeared in the MAIN player
       if (isVideoPage() && !document.querySelector('.yt-custom-speed-button')) {
         const mainPlayer = document.querySelector('#movie_player');
-        const rightControls = mainPlayer ? mainPlayer.querySelector('.ytp-right-controls') : null;
+        const rightControls = findRightControls(mainPlayer);
         const video = mainPlayer ? mainPlayer.querySelector('video') : null;
         
         if (mainPlayer && rightControls && video) {

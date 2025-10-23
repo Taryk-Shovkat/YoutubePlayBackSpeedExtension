@@ -1,24 +1,38 @@
 /* YouTube Custom Speed Control - Content Styles */
 
 .yt-custom-speed-button {
-  position: relative;
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-  opacity: 0.9;
-  transition: opacity 0.2s;
+  position: relative !important;
+  cursor: pointer !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  opacity: 0.9 !important;
+  transition: opacity 0.2s !important;
+  /* Larger button for better visibility */
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  align-self: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  vertical-align: top !important;
+  line-height: 0 !important;
+  box-sizing: border-box !important;
 }
 
 .yt-custom-speed-button:hover {
-  opacity: 1;
+  opacity: 1 !important;
 }
 
 .yt-custom-speed-button svg {
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
+  width: 42px !important;
+  height: 42px !important;
+  pointer-events: none !important;
+  fill: white !important;
+  display: block !important;
 }
 
 /* Speed Panel */
